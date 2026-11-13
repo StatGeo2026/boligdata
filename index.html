@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boligdata-legeplads</title>
+  <meta name="description" content="Lav ggplot-figurer i browseren med data om alle boliger til salg i Danmark.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 15 16 5l12 10v12H4z' fill='%23b4532a'/><rect x='13' y='18' width='6' height='9' fill='white'/></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 15 16 5l12 10v12H4z"/><rect x="13" y="18" width="6" height="9" class="door"/></svg>
+      <div>
+        <h1>Boligdata-legeplads</h1>
+        <p class="sub" id="dataline">Alle boliger til salg i Danmark</p>
+      </div>
+    </div>
+    <div class="actions">
+      <span class="status" id="status" data-state="loading"><span class="dot"></span><span id="status-text">Starter R …</span></span>
+      <label class="format">Format
+        <select id="format">
+          <option value="3:2" selected>3:2</option>
+          <option value="1:1">1:1</option>
+          <option value="16:9">16:9</option>
+          <option value="4:5">4:5</option>
+        </select>
+      </label>
+      <button id="run" class="primary" disabled title="Kør koden (Ctrl/⌘ + Enter)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Kør</button>
+      <button id="submit" disabled title="Send din figur til galleriet">Indsend figur</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="left">
+      <div class="editor-wrap">
+        <div id="editor" class="editor" aria-label="R-kode"></div>
+        <div class="editor-hint"><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> kører koden</div>
+      </div>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="vars">Variabler</button>
+        <button role="tab" aria-selected="false" data-tab="examples">Eksempler</button>
+        <button role="tab" aria-selected="false" data-tab="help">Hjælp</button>
+      </div>
+      <div class="tabpanel" id="tab-vars">
+        <input type="search" id="var-search" placeholder="Søg i variabler, fx pris, kyst, energi …" aria-label="Søg i variabler">
+        <div id="var-list" class="var-list"><p class="muted">Henter variabelliste …</p></div>
+      </div>
+      <div class="tabpanel" id="tab-examples" hidden>
+        <div id="example-list" class="example-list"></div>
+      </div>
+      <div class="tabpanel prose" id="tab-help" hidden>
+        <h3>Sådan virker siden</h3>
+        <p>R kører direkte i din browser (via <a href="https://docs.r-wasm.org/webr/" target="_blank" rel="noopener">webR</a>). Intet bliver sendt til en server, når du kører kode. Første gang tager det et halvt minuts tid at hente R og pakkerne; derefter går det hurtigt.</p>
+        <h3>Data</h3>
+        <p>Alle tabeller ligger klar som data frames. Klik på et variabelnavn under <b>Variabler</b> for at sætte det ind i koden.</p>
+        <ul>
+          <li><code>boliger</code>: én række pr. bolig til salg (fra Boligsiden).</li>
+          <li><code>salg</code>: tidligere salg af de samme adresser. Kobles med <code>case_id</code>.</li>
+          <li><code>kommuner</code>: tal om kommunerne. Kobles med <code>municipality_code</code>.</li>
+          <li><code>byer</code>: de 20 største byer med indbyggertal og koordinater til bymidten.</li>
+          <li><code>kommunekort</code>: kommunegrænser til kort med <code>geom_polygon()</code>.</li>
+          <li><code>stationer</code>: stationer for tog, S-tog, metro og letbane.</li>
+        </ul>
+        <h3>Nyttige funktioner</h3>
+        <p><code>afstand_km(lat1, lon1, lat2, lon2)</code> giver afstanden i km i fugleflugt mellem to punkter.</p>
+        <p>Pakkerne <code>ggplot2</code>, <code>dplyr</code> og <code>forcats</code> er indlæst. Andre pakker kan hentes med fx <code>webr::install("tidyr")</code> og derefter <code>library(tidyr)</code>.</p>
+        <p>Objekter, du laver, bliver liggende mellem kørsler. Har du ødelagt en tabel, så tryk <button class="linklike" id="reset">genindlæs data</button>.</p>
+        <h3>Galleriet</h3>
+        <p>Har du lavet en figur, du er stolt af? Tryk <b>Indsend figur</b>. Figuren, koden, titlen og dit navn bliver vist i galleriet, når underviseren har godkendt den. Galleriet er offentligt, så skriv fx kun dit fornavn.</p>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="plot-wrap">
+        <div class="plot-toolbar">
+          <span id="plot-count" class="muted"></span>
+          <span class="spacer"></span>
+          <button id="prev-plot" class="icon" title="Forrige figur" hidden>‹</button>
+          <button id="next-plot" class="icon" title="Næste figur" hidden>›</button>
+          <button id="download" class="ghost" disabled title="Gem figuren som PNG">Gem PNG</button>
+        </div>
+        <div class="plot-area" id="plot-area">
+          <canvas id="plot" hidden></canvas>
+          <div id="plot-empty" class="plot-empty">
+            <p>Din figur kommer her.</p>
+            <p class="muted">Skriv kode til venstre og tryk <b>Kør</b>.</p>
+          </div>
+          <div id="spinner" class="spinner" hidden><span></span>Kører …</div>
+        </div>
+      </div>
+      <div class="console-wrap">
+        <div class="console-head"><span>R-output</span><button id="clear-console" class="ghost small">Ryd</button></div>
+        <pre id="console" class="console" aria-live="polite"></pre>
+      </div>
+    </section>
+  </main>
+
+  <section class="gallery-section" id="gallery-section">
+    <div class="gallery-head">
+      <h2>Galleri</h2>
+      <p class="muted" id="gallery-note">Klik på en figur for at se koden bag.</p>
+    </div>
+    <div id="gallery" class="gallery"></div>
+  </section>
+
+  <!-- Password gate -->
+  <dialog id="unlock" class="modal">
+    <form method="dialog" id="unlock-form">
+      <h2>Kursets kodeord</h2>
+      <p>Data er kun til brug i undervisningen. Kodeordet står på Absalon.</p>
+      <input type="password" id="unlock-pw" autocomplete="current-password" required placeholder="Kodeord" aria-label="Kodeord">
+      <label class="check"><input type="checkbox" id="unlock-remember" checked> Husk på denne computer</label>
+      <p class="error" id="unlock-error" hidden></p>
+      <div class="modal-actions"><button class="primary" id="unlock-btn" type="submit">Åbn data</button></div>
+    </form>
+  </dialog>
+
+  <!-- Submit dialog -->
+  <dialog id="submit-dialog" class="modal wide">
+    <form id="submit-form">
+      <h2>Indsend din figur</h2>
+      <div class="submit-grid">
+        <img id="submit-preview" alt="Den figur, du indsender">
+        <div class="submit-fields">
+          <label>Titel <input id="submit-title" maxlength="100" required placeholder="Fx: Havudsigt koster"></label>
+          <label>Navn <input id="submit-name" maxlength="60" required placeholder="Fornavn (galleriet er offentligt)"></label>
+          <details><summary>Koden, der bliver sendt med</summary><pre id="submit-code" class="code"></pre></details>
+          <p class="muted small">Figuren vises i galleriet, når underviseren har godkendt den.</p>
+          <p class="error" id="submit-error" hidden></p>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="submit-cancel">Annullér</button>
+        <button type="submit" class="primary" id="submit-send">Indsend</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Gallery item -->
+  <dialog id="item-dialog" class="modal wide">
+    <div class="item">
+      <img id="item-img" alt="">
+      <div class="item-meta">
+        <h2 id="item-title"></h2>
+        <p class="muted" id="item-by"></p>
+        <pre id="item-code" class="code"></pre>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="ghost" id="item-close">Luk</button>
+      <button type="button" class="primary" id="item-open">Åbn koden i editoren</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

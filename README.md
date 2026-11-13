@@ -34,14 +34,24 @@ Neon (the submission check depends on the password).
 
 ## Gallery (Neon)
 
-1. Create a Neon project. In the Console, open **Data API**, tick **Use Neon
-   Auth**, and enable it.
-2. Under **Auth > Settings**, allow anonymous access, and add the site's origin
-   (for example `https://<user>.github.io`) as a trusted domain.
-3. Run `fuld/ud/neon_udfyldt.sql` in the **SQL Editor**.
-4. Put the database URL (without user, password or `?…`) into `config.js`.
+Neon project `boligdata-galleri` (`rough-rice-14034312`, Frankfurt):
+https://console.neon.tech/app/projects/rough-rice-14034312
 
-New submissions wait until you tick `godkendt` in **Tables > indsendelser**.
+New submissions wait until you tick `godkendt` in **Tables > indsendelser**
+(or run `update indsendelser set godkendt = true where id = '...'` in the SQL
+Editor). See `neon.sql` for the access rules.
+
+How it was set up (Neon CLI, `npx neon@latest`):
+
+```sh
+neon projects create --name boligdata-galleri --region-id aws-eu-central-1
+neon neon-auth enable --project-id <id> --database-name neondb
+neon data-api create --project-id <id> --database neondb \
+  --auth-provider neon_auth --db-anon-role anonymous --db-max-rows 500
+neon neon-auth domain add https://statgeo2026.github.io --project-id <id>
+# then run fuld/ud/neon_udfyldt.sql as the owner, and
+neon data-api refresh-schema --project-id <id> --database neondb
+```
 
 ## Testing locally
 

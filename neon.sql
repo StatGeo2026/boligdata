@@ -7,12 +7,15 @@
 -- The script can be rerun; it keeps existing submissions.
 --
 -- The web page talks to Neon as the `anonymous` role. It may
---   * insert rows into `indsendelser` (only with the right course code, and
---     always as not approved), and
---   * read the view `galleri`, which only has approved rows.
--- Nothing else: no updates, no deletes, no reading the queue or the code.
+--   * insert rows into `indsendelser` (only with the right course code), and
+--   * read the view `galleri`, which only has rows with `godkendt`.
+-- Nothing else: no updates, no deletes, no reading the course code, and no
+-- setting `godkendt` (the column default decides).
 --
--- Approval does not depend on row-level security (RLS): the `where godkendt`
+-- New submissions are public at once (`godkendt` defaults to true). Untick
+-- `godkendt` to hide one. To require approval again, see the end of the file.
+--
+-- This does not depend on row-level security (RLS): the `where godkendt`
 -- filter sits in the view, and a trigger checks every insert. RLS is still on
 -- as an extra layer, so if the console shows a toggle for it, leave it on.
 
@@ -24,8 +27,9 @@ create table if not exists public.indsendelser (
   kode        text not null check (char_length(kode) between 1 and 8000),
   billede     text not null check (billede like 'data:image/%' and char_length(billede) <= 600000),
   kursuskode  text not null,
-  godkendt    boolean not null default false
+  godkendt    boolean not null default true
 );
+alter table public.indsendelser alter column godkendt set default true;
 
 -- What the page reads. The view runs with its owner's rights, so anonymous
 -- needs no access to the table itself to see approved rows.
@@ -34,8 +38,8 @@ create or replace view public.galleri as
   from public.indsendelser
   where godkendt;
 
--- Student inserts: right course code, never pre-approved. Inserts by the owner
--- (Neon Console) are not checked.
+-- Student inserts need the right course code. Inserts by the owner (Neon
+-- Console) are not checked.
 create or replace function public.indsendelse_tjek() returns trigger
 language plpgsql as $$
 begin
@@ -43,7 +47,6 @@ begin
     if new.kursuskode is distinct from '__KURSUSKODE_HASH__' then
       raise exception 'forkert kursuskode' using errcode = '42501';
     end if;
-    new.godkendt := false;
   end if;
   return new;
 end $$;
@@ -65,19 +68,18 @@ alter table public.indsendelser enable row level security;
 
 drop policy if exists indsend on public.indsendelser;
 create policy indsend on public.indsendelser for insert to anonymous
-  with check (godkendt = false and kursuskode = '__KURSUSKODE_HASH__');
+  with check (kursuskode = '__KURSUSKODE_HASH__');
 
 drop policy if exists se_godkendte on public.indsendelser;
 
 -- ---------------------------------------------------------------------------
 -- Moderating
---   Neon Console > Tables > indsendelser: tick `godkendt` on the rows to show.
+--   Neon Console > Tables > indsendelser: untick `godkendt` to hide a figure.
 --   Or in the SQL Editor:
---     select id, created_at, navn, titel from indsendelser where not godkendt;
---     update indsendelser set godkendt = true where id = '...';
+--     select id, created_at, navn, titel, godkendt from indsendelser;
+--     update indsendelser set godkendt = false where id = '...';
 --     delete from indsendelser where id = '...';
 --
--- Skip moderation (everything appears at once): remove `where godkendt` from
--- the view, i.e.
---     create or replace view galleri as
---       select id, created_at, navn, titel, kode, billede from indsendelser;
+-- Require approval before figures appear (new rows hidden until you tick
+-- `godkendt`): change the default in this file to false and rerun it, or run
+--     alter table indsendelser alter column godkendt set default false;

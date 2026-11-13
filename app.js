@@ -439,8 +439,9 @@ $("submit-form").addEventListener("submit", async (e) => {
         billede: $("submit-preview").src, kursuskode: await submissionHash(),
       }),
     });
-    send.textContent = "Tak! Sendt til godkendelse ✓";
+    send.textContent = "Tak! Din figur er i galleriet ✓";
     $("submit-title").value = "";
+    loadGallery();
     setTimeout(() => $("submit-dialog").close(), 1600);
   } catch (err) {
     $("submit-error").textContent = `Det gik ikke: ${err.message}`;

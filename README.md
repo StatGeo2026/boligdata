@@ -40,12 +40,14 @@ without re-encrypting the data.
 Neon project `boligdata-galleri` (`rough-rice-14034312`, Frankfurt):
 https://console.neon.tech/app/projects/rough-rice-14034312
 
-New submissions wait until you tick `godkendt` in **Tables > indsendelser**
-(or run `update indsendelser set godkendt = true where id = '...'` in the SQL
-Editor). See `neon.sql` for the access rules: the page reads approved figures
-through the view `galleri` (which has `where godkendt` built in), and a trigger
-checks the course code on every insert, so moderation still holds if row-level
-security on the table is switched off in the console.
+New submissions appear in the gallery at once. To hide one, untick `godkendt`
+in **Tables > indsendelser** (or run
+`update indsendelser set godkendt = false where id = '...'` in the SQL Editor).
+To require approval before figures appear, set the column default to false
+(see the end of `neon.sql`). The page reads the gallery through the view
+`galleri` (which has `where godkendt` built in), and a trigger checks the
+course code on every insert, so this holds even if row-level security on the
+table is switched off in the console.
 
 How it was set up (Neon CLI, `npx neon@latest`):
 

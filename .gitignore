@@ -1,3 +1,4 @@
 .DS_Store
 node_modules/
 *.sql.local
+eksempler_skjulte.js

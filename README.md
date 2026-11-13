@@ -9,6 +9,7 @@ gallery of student figures is stored in a Neon Postgres database.
 ```
 index.html, style.css, app.js   the page
 eksempler.js                    start code and example snippets (Danish)
+eksempler_skjulte.js            more examples, kept out of git (not on the site)
 config.js                       Neon URL, webR version, R packages
 data/boligdata.bin              encrypted .rds with all tables (AES-GCM)
 data/variabler.json             variable names and descriptions (not secret)

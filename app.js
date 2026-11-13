@@ -245,11 +245,6 @@ $("reset").onclick = async () => {
 // ------------------------------------------------------- variables panel ----
 async function loadVariables() {
   const meta = await (await fetch("data/variabler.json")).json();
-  const n = meta.tables.find((t) => t.table === "boliger")?.nrow;
-  if (n) {
-    const date = new Date(meta.hentet).toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" });
-    $("dataline").textContent = `${n.toLocaleString("da-DK")} boliger til salg i Danmark · Boligsiden, ${date}`;
-  }
   const list = $("var-list");
   list.textContent = "";
   for (const t of meta.tables) {

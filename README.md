@@ -30,7 +30,9 @@ node 05_krypter.mjs             # -> site/data/boligdata.bin, data/variabler.jso
 
 Then commit and push `data/`. To change the password, edit `fuld/.kodeord`,
 rerun `05_krypter.mjs`, and also rerun the generated `ud/neon_udfyldt.sql` in
-Neon (the submission check depends on the password).
+Neon (the submission check depends on the password). After editing only
+`neon.sql`, `node 05_krypter.mjs --kun-sql` regenerates `ud/neon_udfyldt.sql`
+without re-encrypting the data.
 
 ## Gallery (Neon)
 
@@ -39,7 +41,10 @@ https://console.neon.tech/app/projects/rough-rice-14034312
 
 New submissions wait until you tick `godkendt` in **Tables > indsendelser**
 (or run `update indsendelser set godkendt = true where id = '...'` in the SQL
-Editor). See `neon.sql` for the access rules.
+Editor). See `neon.sql` for the access rules: the page reads approved figures
+through the view `galleri` (which has `where godkendt` built in), and a trigger
+checks the course code on every insert, so moderation still holds if row-level
+security on the table is switched off in the console.
 
 How it was set up (Neon CLI, `npx neon@latest`):
 

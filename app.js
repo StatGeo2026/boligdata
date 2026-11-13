@@ -352,7 +352,7 @@ async function loadGallery() {
   const box = $("gallery");
   try {
     const rows = await (await neon(
-      "/indsendelser?select=id,created_at,navn,titel,kode,billede&order=created_at.desc&limit=300")).json();
+      "/galleri?select=id,created_at,navn,titel,kode,billede&order=created_at.desc&limit=300")).json();
     box.textContent = "";
     if (!rows.length) {
       box.append(Object.assign(document.createElement("p"), {
